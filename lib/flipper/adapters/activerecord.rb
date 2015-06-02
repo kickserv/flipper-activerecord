@@ -24,7 +24,7 @@ module Flipper
 
       # Public: Adds a feature to the set of known features.
       def add(feature)
-        Flipper::ActiveRecord::Feature.find_or_create_by!(name: feature.name.to_s)
+        Flipper::ActiveRecord::Feature.find_or_create_by_name!(feature.name.to_s)
         true
       end
 
@@ -44,7 +44,7 @@ module Flipper
       # Returns a Hash of Flipper::Gate#key => value.
       def get(feature)
         result = {}
-        f = Flipper::ActiveRecord::Feature.eager_load(:gates).find_by(name: feature.key)
+        f = Flipper::ActiveRecord::Feature.eager_load(:gates).find_by_name(feature.key)
 
         feature.gates.each do |gate|
           result[gate.key] = case gate.data_type
@@ -79,23 +79,18 @@ module Flipper
         when :boolean, :integer
           g = Flipper::ActiveRecord::Gate.joins(:feature).
             where(flipper_features: {name: feature.key}).
-            find_or_initialize_by({
-              name: gate.key.to_s,
-            })
+            find_or_initialize_by_name(gate.key.to_s)
           g.value = thing.value.to_s
           unless g.persisted?
-            g.feature = Flipper::ActiveRecord::Feature.select(:id).find_or_create_by!(name: feature.key)
+            g.feature = Flipper::ActiveRecord::Feature.select(:id).find_or_create_by_name!(feature.key)
           end
           g.save!
         when :set
           g = Flipper::ActiveRecord::Gate.joins(:feature).
             where(flipper_features: {name: feature.key}).
-            find_or_initialize_by({
-              name:  gate.key.to_s,
-              value: thing.value.to_s,
-            })
+            find_or_initialize_by_name_and_value(gate.key.to_s, thing.value.to_s)
           unless g.persisted?
-            g.feature = Flipper::ActiveRecord::Feature.select(:id).find_or_create_by!(name: feature.key)
+            g.feature = Flipper::ActiveRecord::Feature.select(:id).find_or_create_by_name!(name: feature.key)
           end
           g.save!
         else
